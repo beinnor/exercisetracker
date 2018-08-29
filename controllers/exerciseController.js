@@ -3,25 +3,26 @@ const User = require('../models/user');
 
 // Add exercise
 exports.exerciseAdd = [
-  function (req, res, next) {
-    console.log('userId is: ' + req.body.userId);
-
-    User.findById(req.body.userId).exec()
-      .then((userFound) => {
-        const exerciseInstance = new Exercise(
-          {
-            description: req.body.description,
-            duration: req.body.duration,
-            userid: userFound,
-            date: req.body.date
-          });
-        console.log(userFound);
-        console.log('--------------------');
-        console.log(exerciseInstance);
-        return exerciseInstance.save();
-      })
-      .then((savedExercise) => {
-        res.json(savedExercise);
+  (req, res, next) => {
+    const exerciseInstance = new Exercise(
+      {
+        description: req.body.description,
+        duration: req.body.duration,
+        date: req.body.date
+      });
+    User.findByIdAndUpdate(req.body.userId,
+      { $push: { exercises: exerciseInstance } },
+      { safe: true, upsert: true, new: true }
+    ).exec()
+      .then((result) => {
+        const outputResults = {
+          username: result.username,
+          _id: result._id,
+          description: exerciseInstance.description,
+          duration: exerciseInstance.duration,
+          date: exerciseInstance.date
+        };
+        res.json(outputResults);
       })
       .catch((err) => { return next(err); });
   }

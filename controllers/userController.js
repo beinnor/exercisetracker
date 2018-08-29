@@ -11,13 +11,16 @@ exports.userAdd = [
     User.find({ username: userInstance.username }).exec()
       .then((result) => {
         if (result.length > 0) {
-          return next(new Error('Username already taken'));
+          throw new Error('Username already taken');
         } else {
-          userInstance.save((err, result) => {
-            if (err) { return next(err); }
-            res.json({ name: result.username, id: result._id });
-          });
+          return userInstance.save();
         }
+      })
+      .then((result) => {
+        result = result.toObject();
+        delete result.__v;
+        delete result.exercises;
+        res.json(result);
       })
       .catch((err) => { return next(err); });
   }
