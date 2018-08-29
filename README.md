@@ -1,6 +1,9 @@
 # exercisetracker
 FCC: Apis and Microservices Projects - Exercise Tracker 
 
+## Link to user stories
+https://forum.freecodecamp.org/t/exercise-tracker-project-with-testable-user-stories-guinea-pigs-needed/73232
+
 
 ## User Stories
 
