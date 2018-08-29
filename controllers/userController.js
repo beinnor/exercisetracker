@@ -25,3 +25,12 @@ exports.userAdd = [
       .catch((err) => { return next(err); });
   }
 ];
+
+// list users
+exports.listUsers = (req, res, next) => {
+  User.find({}, 'username _id').exec()
+    .then((users) => {
+      res.json(users);
+    })
+    .catch((err) => { return next(err); });
+};
