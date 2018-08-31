@@ -5,7 +5,7 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const exerciseController = require('../controllers/exerciseController');
 
-/* POST , add user. */
+/* POST add user. */
 router.post('/new-user', userController.userAdd);
 
 /* GET list all users. */
@@ -13,5 +13,8 @@ router.get('/users', userController.listUsers);
 
 /* POST add exercise. */
 router.post('/add', exerciseController.exerciseAdd);
+
+/* GET list exercises for given user */
+router.get('/log', exerciseController.log);
 
 module.exports = router;
