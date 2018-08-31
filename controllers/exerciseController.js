@@ -45,6 +45,7 @@ exports.log = (req, res, next) => {
       const exerciseCount = user.exercises.length;
       user.exercises.forEach((exercise) => {
         delete exercise._id;
+        exercise.date = exercise.date.toDateString();
       });
       user.count = exerciseCount;
 
