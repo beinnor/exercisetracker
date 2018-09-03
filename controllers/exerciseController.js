@@ -30,18 +30,32 @@ exports.exerciseAdd = [
 
 // Full exercise log of a user with an exercise count
 exports.log = (req, res, next) => {
-  User.findOne({_id: req.query.userId}).exec()
+  const userid = req.query.userId;
+  let from = req.query.from;
+  let to = req.query.to;
+  const limit = parseInt(req.query.limit);
+
+  if (from !== undefined) {
+    from = new Date(from);
+  }
+  if (to !== undefined) {
+    to = new Date(to);
+    to.setDate(to.getDate() + 1); // Add 1 day to include date
+  }
+
+  let query = {
+    _id: userid,
+    exercises: { $elemMatch: { date: { $lte: to, $gte: from } } }
+  };
+
+  let projection = {
+    exercises: { $slice: [0, limit] }
+  };
+
+  User.findOne(query, projection).exec()
     .then((user) => {
-      /* --- FORMAT OF OUTPUT ---
-      {"_id":"Sknq5S-v7","username":"goblow","count":3,
-        "log":[
-          {"description":"lollinf","duration":4000,"date":"Sat Oct 10 2015"},
-          {"description":"lollinf","duration":4000,"date":"Sat Oct 10 2015"},
-          {"description":"lollinf","duration":4000,"date":"Sat Oct 10 2015"}
-          ]
-        }
-      */
       user = user.toObject();
+
       const exerciseCount = user.exercises.length;
       user.exercises.forEach((exercise) => {
         delete exercise._id;
@@ -55,10 +69,10 @@ exports.log = (req, res, next) => {
         count: exerciseCount,
         log: user.exercises
       };
-
-      console.log(outputUser);
-
-      res.json(outputUser);
+      return outputUser;
+    })
+    .then((user) => {
+      res.json(user);
     })
     .catch((err) => { return next(err); });
 };
