@@ -33,7 +33,8 @@ exports.log = (req, res, next) => {
   const userid = req.query.userId;
   let from = req.query.from;
   let to = req.query.to;
-  const limit = parseInt(req.query.limit);
+  let projection;
+  let query = { _id: userid };
 
   if (from !== undefined) {
     from = new Date(from);
@@ -41,16 +42,16 @@ exports.log = (req, res, next) => {
   if (to !== undefined) {
     to = new Date(to);
     to.setDate(to.getDate() + 1); // Add 1 day to include date
+    query.exercises = { $elemMatch: { date: { $lte: to, $gte: from } } };
   }
 
-  let query = {
-    _id: userid,
-    exercises: { $elemMatch: { date: { $lte: to, $gte: from } } }
-  };
-
-  let projection = {
-    exercises: { $slice: [0, limit] }
-  };
+  if (req.query.limit) {
+    projection = {
+      exercises: { $slice: [0, parseInt(req.query.limit)] }
+    };
+  } else {
+    projection = {};
+  }
 
   User.findOne(query, projection).exec()
     .then((user) => {
