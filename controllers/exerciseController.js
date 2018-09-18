@@ -4,25 +4,20 @@ const User = require('../models/user');
 // Add exercise
 exports.exerciseAdd = [
   (req, res, next) => {
-    const exerciseInstance = new Exercise(
-      {
-        description: req.body.description,
-        duration: req.body.duration,
-        date: req.body.date
-      });
-    User.findByIdAndUpdate(req.body.userId,
-      { $push: { exercises: exerciseInstance } },
-      { safe: true, upsert: true, new: true }
-    ).exec()
+    User.findById(req.body.userId).exec()
       .then((result) => {
-        const outputResults = {
-          username: result.username,
-          _id: result._id,
-          description: exerciseInstance.description,
-          duration: exerciseInstance.duration,
-          date: exerciseInstance.date
-        };
-        res.json(outputResults);
+        const exerciseInstance = new Exercise(
+          {
+            description: req.body.description,
+            duration: req.body.duration,
+            date: req.body.date,
+            username: result.username,
+            userId: result._id
+          });
+        exerciseInstance.save(function (err) {
+          if (err) return new Error(err);
+        });
+        res.json(exerciseInstance);
       })
       .catch((err) => { return next(err); });
   }
@@ -33,47 +28,30 @@ exports.log = (req, res, next) => {
   const userid = req.query.userId;
   let from = req.query.from;
   let to = req.query.to;
-  let projection;
-  let query = { _id: userid };
+  let query = { userId: userid };
+  let limit = 0;
 
   if (from !== undefined) {
     from = new Date(from);
+    query = { userId: userid, date: { $gte: from } };
   }
   if (to !== undefined) {
     to = new Date(to);
     to.setDate(to.getDate() + 1); // Add 1 day to include date
-    query.exercises = { $elemMatch: { date: { $lte: to, $gte: from } } };
+    if (from !== undefined) {
+      query = { userId: userid, date: { $lte: to, $gte: from } };
+    } else {
+      query = { userId: userid, date: { $lte: to } };
+    }
   }
 
   if (req.query.limit) {
-    projection = {
-      exercises: { $slice: [0, parseInt(req.query.limit)] }
-    };
-  } else {
-    projection = {};
+    limit = parseInt(req.query.limit);
   }
 
-  User.findOne(query, projection).exec()
-    .then((user) => {
-      user = user.toObject();
-
-      const exerciseCount = user.exercises.length;
-      user.exercises.forEach((exercise) => {
-        delete exercise._id;
-        exercise.date = exercise.date.toDateString();
-      });
-      user.count = exerciseCount;
-
-      const outputUser = {
-        _id: user._id,
-        username: user.username,
-        count: exerciseCount,
-        log: user.exercises
-      };
-      return outputUser;
-    })
-    .then((user) => {
-      res.json(user);
+  Exercise.find(query).limit(limit).exec()
+    .then((result) => {
+      res.json(result);
     })
     .catch((err) => { return next(err); });
 };
