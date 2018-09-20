@@ -4,11 +4,13 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
+const cors = require('cors');
 
 const indexRouter = require('./routes/index');
 const apiRouter = require('./routes/api');
 
 const app = express();
+app.use(cors());
 
 // Set up mongoose connection
 const mongoose = require('mongoose');
