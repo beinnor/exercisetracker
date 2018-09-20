@@ -3,6 +3,7 @@ const User = require('../models/user');
 
 // Add exercise
 exports.exerciseAdd = [
+
   (req, res, next) => {
     const exerciseInstance = new Exercise(
       {
@@ -10,6 +11,11 @@ exports.exerciseAdd = [
         duration: req.body.duration,
         date: req.body.date
       });
+
+    if (exerciseInstance.date === null) {
+      exerciseInstance.date = Date.now();
+    }
+
     User.findByIdAndUpdate(req.body.userId,
       { $push: { exercises: exerciseInstance } },
       { safe: true, upsert: true, new: true }
@@ -20,7 +26,7 @@ exports.exerciseAdd = [
           _id: result._id,
           description: exerciseInstance.description,
           duration: exerciseInstance.duration,
-          date: exerciseInstance.date
+          date: exerciseInstance.date.toDateString()
         };
         res.json(outputResults);
       })
