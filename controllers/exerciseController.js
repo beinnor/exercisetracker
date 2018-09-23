@@ -51,71 +51,44 @@ exports.log = (req, res, next) => {
     query.exercises = { $elemMatch: { date: { $lte: to, $gte: from } } };
   }
 
+
+  aggregate = [
+
+    {
+      $match: {
+        '_id': userid
+      }
+    }, {
+      $unwind: {
+        path: '$exercises'
+      }
+    }, {
+      $match: {
+        'exercises.date': {
+          $gt: new Date(from),
+          $lt: new Date(to)
+        }
+      }
+    }
+  ];
   if (req.query.limit) {
-    aggregate = [
-
-      {
-        $match: {
-          '_id': userid
-        }
-      }, {
-        $unwind: {
-          path: '$exercises'
-        }
-      }, {
-        $match: {
-          'exercises.date': {
-            $gt: new Date(from),
-            $lt: new Date(to)
-          }
-        }
-      }, {
-        '$limit': parseInt(req.query.limit)
-      }, {
-        $group: {
-          _id: '$_id',
-          username: {
-            '$first': '$username'
-          },
-          exercises: {
-            '$push': '$exercises'
-          }
-        }
-      }
-
-    ];
-  } else {
-    aggregate = [
-
-      {
-        $match: {
-          '_id': userid
-        }
-      }, {
-        $unwind: {
-          path: '$exercises'
-        }
-      }, {
-        $match: {
-          'exercises.date': {
-            $gt: new Date(from),
-            $lt: new Date(to)
-          }
-        }
-      }, {
-        $group: {
-          _id: '$_id',
-          username: {
-            '$first': '$username'
-          },
-          exercises: {
-            '$push': '$exercises'
-          }
-        }
-      }
-
-    ];
+    aggregate.push({
+      '$limit': parseInt(req.query.limit)
+    });
   }
+  aggregate.push({
+    $group: {
+      _id: '$_id',
+      username: {
+        '$first': '$username'
+      },
+      exercises: {
+        '$push': '$exercises'
+      }
+    }
+  });
+
+  console.log(aggregate);
 
   User.aggregate(aggregate).exec()
     .then((user) => {
