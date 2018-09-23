@@ -39,8 +39,8 @@ exports.log = (req, res, next) => {
   const userid = req.query.userId;
   let from = req.query.from;
   let to = req.query.to;
-  let projection;
   let query = { _id: userid };
+  let aggregate;
 
   if (from !== undefined) {
     from = new Date(from);
@@ -52,29 +52,85 @@ exports.log = (req, res, next) => {
   }
 
   if (req.query.limit) {
-    projection = {
-      exercises: { $slice: [0, parseInt(req.query.limit)] }
-    };
+    aggregate = [
+
+      {
+        $match: {
+          '_id': userid
+        }
+      }, {
+        $unwind: {
+          path: '$exercises'
+        }
+      }, {
+        $match: {
+          'exercises.date': {
+            $gt: new Date(from),
+            $lt: new Date(to)
+          }
+        }
+      }, {
+        '$limit': parseInt(req.query.limit)
+      }, {
+        $group: {
+          _id: '$_id',
+          username: {
+            '$first': '$username'
+          },
+          exercises: {
+            '$push': '$exercises'
+          }
+        }
+      }
+
+    ];
   } else {
-    projection = {};
+    aggregate = [
+
+      {
+        $match: {
+          '_id': userid
+        }
+      }, {
+        $unwind: {
+          path: '$exercises'
+        }
+      }, {
+        $match: {
+          'exercises.date': {
+            $gt: new Date(from),
+            $lt: new Date(to)
+          }
+        }
+      }, {
+        $group: {
+          _id: '$_id',
+          username: {
+            '$first': '$username'
+          },
+          exercises: {
+            '$push': '$exercises'
+          }
+        }
+      }
+
+    ];
   }
 
-  User.findOne(query, projection).exec()
+  User.aggregate(aggregate).exec()
     .then((user) => {
-      user = user.toObject();
-
-      const exerciseCount = user.exercises.length;
-      user.exercises.forEach((exercise) => {
+      const exerciseCount = user[0].exercises.length;
+      user[0].exercises.forEach((exercise) => {
         delete exercise._id;
         exercise.date = exercise.date.toDateString();
       });
       user.count = exerciseCount;
 
       const outputUser = {
-        _id: user._id,
-        username: user.username,
+        _id: user[0]._id,
+        username: user[0].username,
         count: exerciseCount,
-        log: user.exercises
+        log: user[0].exercises
       };
       return outputUser;
     })
