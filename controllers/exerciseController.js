@@ -111,28 +111,31 @@ exports.log = (req, res, next) => {
   console.log(aggregate);
 
   User.findById(userid).exec()
-    .then()
-    .catch((err) => { return next(err); });
-
-  User.aggregate(aggregate).exec()
     .then((user) => {
-      const exerciseCount = user[0].exercises.length;
-      user[0].exercises.forEach((exercise) => {
-        delete exercise._id;
-        exercise.date = exercise.date.toDateString();
-      });
-      user.count = exerciseCount;
+      if (user === null) {
+        return next(new Error('Userid not found'));
+      }
+      User.aggregate(aggregate).exec()
+        .then((user) => {
+          const exerciseCount = user[0].exercises.length;
+          user[0].exercises.forEach((exercise) => {
+            delete exercise._id;
+            exercise.date = exercise.date.toDateString();
+          });
+          user.count = exerciseCount;
 
-      const outputUser = {
-        _id: user[0]._id,
-        username: user[0].username,
-        count: exerciseCount,
-        log: user[0].exercises
-      };
-      return outputUser;
-    })
-    .then((user) => {
-      res.json(user);
+          const outputUser = {
+            _id: user[0]._id,
+            username: user[0].username,
+            count: exerciseCount,
+            log: user[0].exercises
+          };
+          return outputUser;
+        })
+        .then((user) => {
+          res.json(user);
+        })
+        .catch((err) => { return next(err); });
     })
     .catch((err) => { return next(err); });
 };
