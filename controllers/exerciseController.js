@@ -1,10 +1,20 @@
 const Exercise = require('../models/exercise');
 const User = require('../models/user');
 
+const minDate = '1950-01-01';
+const maxDate = '2100-01-01';
+
 // Add exercise
 exports.exerciseAdd = [
 
   (req, res, next) => {
+    if (new Date(req.body.date) > new Date(maxDate)) {
+      return next(new Error('Maximum date allowed is 3000-01-01'));
+    }
+    if (new Date(req.body.date) < new Date(minDate)) {
+      return next(new Error('Minimum date allowed is 1000-01-01'));
+    }
+
     const exerciseInstance = new Exercise(
       {
         description: req.body.description,
@@ -44,13 +54,16 @@ exports.log = (req, res, next) => {
 
   if (from !== undefined) {
     from = new Date(from);
+  } else {
+    from = new Date(minDate);
   }
   if (to !== undefined) {
     to = new Date(to);
     to.setDate(to.getDate() + 1); // Add 1 day to include date
     query.exercises = { $elemMatch: { date: { $lte: to, $gte: from } } };
+  } else {
+    to = new Date(maxDate);
   }
-
 
   aggregate = [
 
@@ -76,6 +89,13 @@ exports.log = (req, res, next) => {
       '$limit': parseInt(req.query.limit)
     });
   }
+
+  aggregate.push({
+    $sort: {
+      'exercises.date': 1
+    }
+  });
+
   aggregate.push({
     $group: {
       _id: '$_id',
@@ -90,25 +110,32 @@ exports.log = (req, res, next) => {
 
   console.log(aggregate);
 
-  User.aggregate(aggregate).exec()
+  User.findById(userid).exec()
     .then((user) => {
-      const exerciseCount = user[0].exercises.length;
-      user[0].exercises.forEach((exercise) => {
-        delete exercise._id;
-        exercise.date = exercise.date.toDateString();
-      });
-      user.count = exerciseCount;
+      if (user === null) {
+        return next(new Error('Userid not found'));
+      }
+      User.aggregate(aggregate).exec()
+        .then((user) => {
+          const exerciseCount = user[0].exercises.length;
+          user[0].exercises.forEach((exercise) => {
+            delete exercise._id;
+            exercise.date = exercise.date.toDateString();
+          });
+          user.count = exerciseCount;
 
-      const outputUser = {
-        _id: user[0]._id,
-        username: user[0].username,
-        count: exerciseCount,
-        log: user[0].exercises
-      };
-      return outputUser;
-    })
-    .then((user) => {
-      res.json(user);
+          const outputUser = {
+            _id: user[0]._id,
+            username: user[0].username,
+            count: exerciseCount,
+            log: user[0].exercises
+          };
+          return outputUser;
+        })
+        .then((user) => {
+          res.json(user);
+        })
+        .catch((err) => { return next(err); });
     })
     .catch((err) => { return next(err); });
 };
